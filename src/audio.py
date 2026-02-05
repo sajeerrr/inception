@@ -68,16 +68,27 @@ class AudioRecorder:
                 # For this demo, let's try stationary noise reduction on the chunk content itself.
                 # Ideally, we would capture a 'noise only' profile at startup.
                 
-                # Simple spectral gating
-                reduced_noise_chunk = nr.reduce_noise(
-                    y=audio_chunk.flatten(), 
-                    sr=self.sample_rate,
-                    prop_decrease=0.8, # reduce noise by 80%
-                    n_fft=1024,
-                    stationary=True  # Assume stationary noise for speed
-                )
+                # 1. Volume Gate: DISABLED (Was causing data loss)
+                # max_amp = np.max(np.abs(audio_chunk))
+                # if max_amp < 0.005: 
+                #    reduced_noise_chunk = np.zeros_like(audio_chunk)
+                #    yield reduced_noise_chunk
+                #    continue
+
+                # 2. Noise Reduction: DISABLED (Was cutting off speech)
+                # reduced_noise_chunk = nr.reduce_noise(
+                #    y=audio_chunk.flatten(), 
+                #    sr=self.sample_rate,
+                #    prop_decrease=0.4, 
+                #    n_fft=1024,
+                #    stationary=True, 
+                #    n_jobs=1 
+                # )
                 
-                yield reduced_noise_chunk
+                # yield reduced_noise_chunk
+                
+                # Pass RAW audio directly to ensure nothing is lost
+                yield audio_chunk
                 
             except queue.Empty:
                 continue

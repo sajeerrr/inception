@@ -10,3 +10,4 @@ scipy
 Pillow
 tf-keras
 soundfile
+customtkinter

@@ -1,8 +1,8 @@
-import tkinter as tk
+import customtkinter as ctk
 from src.gui import TranslaterApp
 
 def main():
-    root = tk.Tk()
+    root = ctk.CTk()
     app = TranslaterApp(root)
     root.mainloop()
 

@@ -98,6 +98,11 @@ class TranslaterApp:
         self.btn_record = tk.Button(controls_frame, text="Start Recording", bg="#27ae60", fg="white", font=("Arial", 12, "bold"), command=self.toggle_recording, state=tk.DISABLED)
         self.btn_record.pack(side=tk.LEFT, padx=5)
         
+        # Audio Animation Visualizer
+        self.viz_canvas = tk.Canvas(controls_frame, width=30, height=30, bg=main_frame.cget("bg"), highlightthickness=0)
+        self.viz_canvas.pack(side=tk.LEFT, padx=5)
+        self.viz_indicator = self.viz_canvas.create_oval(5, 5, 25, 25, fill="gray", outline="gray")
+        
         self.btn_upload = tk.Button(controls_frame, text="Upload Audio", bg="#2980b9", fg="white", font=("Arial", 12, "bold"), command=self.upload_file, state=tk.DISABLED)
         self.btn_upload.pack(side=tk.LEFT, padx=5)
 
@@ -179,14 +184,30 @@ class TranslaterApp:
         
         self.stop_event.clear()
         threading.Thread(target=self._process_queue_loop, daemon=True).start()
+        
+        # Start Animation
+        self._animate_recording()
 
     def stop_recording(self):
         self.is_recording = False
         self.btn_record.config(text="Start Recording", bg="#27ae60")
         self.status_var.set("Stopping...")
+        
+        # Reset Animation
+        self.viz_canvas.itemconfig(self.viz_indicator, fill="gray")
+        
         self.recorder.stop()
         self.stop_event.set()
         self.status_var.set("Ready.")
+
+    def _animate_recording(self):
+        if self.is_recording:
+            current_color = self.viz_canvas.itemcget(self.viz_indicator, "fill")
+            next_color = "#e74c3c" if current_color == "gray" else "gray" # Pulse red
+            self.viz_canvas.itemconfig(self.viz_indicator, fill=next_color)
+            self.root.after(500, self._animate_recording)
+        else:
+            self.viz_canvas.itemconfig(self.viz_indicator, fill="gray")
 
     def _process_queue_loop(self):
         """
@@ -195,24 +216,57 @@ class TranslaterApp:
         buffer_seconds = 4
         buffer_size = int(self.recorder.sample_rate * buffer_seconds)
         current_buffer = [] 
+        self.full_session_audio = [] # To store complete session 
         
         for audio_chunk in self.recorder.get_audio():
-            # print(f"DEBUG: Rx chunk {len(audio_chunk)}")
+            print(f"DEBUG: Rx chunk {len(audio_chunk)}", flush=True)
             if self.stop_event.is_set() and not self.is_recording:
                 break
             
             current_buffer.append(audio_chunk)
             
+            # Accumulate for saving to file later
+            self.full_session_audio.append(audio_chunk)
+        
             total_samples = sum(len(c) for c in current_buffer)
-            if total_samples >= buffer_size:
+            # Reduced buffer to 3s for slightly faster specific translation updates while maintaining context
+            if total_samples >= self.recorder.sample_rate * 3:
                 full_audio = np.concatenate(current_buffer)
-                # print(f"DEBUG: Processing buffer size {len(full_audio)}", flush=True)
+                print(f"DEBUG: Processing buffer size {len(full_audio)}", flush=True)
                 self.process_audio_data(full_audio)
                 current_buffer = []
 
         if current_buffer:
              full_audio = np.concatenate(current_buffer)
              self.process_audio_data(full_audio)
+             
+        # End of recording loop - Ask to save
+        if self.full_session_audio:
+            self.root.after(0, self.prompt_save_recording)
+
+    def prompt_save_recording(self):
+        try:
+            full_data = np.concatenate(self.full_session_audio)
+            
+            save_path = filedialog.asksaveasfilename(
+                defaultextension=".wav",
+                filetypes=[("WAV files", "*.wav")],
+                title="Save Recording?"
+            )
+            
+            if save_path:
+                import scipy.io.wavfile as wav
+                # Scale float32 back to int16 for standard WAV compatibility if needed, 
+                # but scipy handles float32 (-1.0 to 1.0) usually. 
+                # Let's ensure it's saved correctly.
+                wav.write(save_path, self.recorder.sample_rate, full_data)
+                self.status_var.set(f"Saved recording to {os.path.basename(save_path)}")
+                
+            self.full_session_audio = [] # Clear memory
+            
+        except Exception as e:
+            print(f"Error saving file: {e}")
+            messagebox.showerror("Save Error", f"Could not save recording: {e}")
 
     def upload_file(self):
         # Added support for OGA, OGG, FLAC, M4A, AAC as per request

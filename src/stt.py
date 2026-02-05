@@ -51,8 +51,14 @@ class SpeechRecognizer:
                     inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
                 with torch.no_grad():
-                    # Force Urdu language which maps to Kashmiri in this fine-tune often
-                    generated_ids = self.model.generate(**inputs, language="ur")
+                    # Force Urdu language + Add penalties to stop repetition
+                    generated_ids = self.model.generate(
+                        **inputs, 
+                        language="ur",
+                        repetition_penalty=1.2,      # Penalize repeating tokens
+                        no_repeat_ngram_size=3,      # Prevent 3-gram repetitions
+                        temperature=0.2              # Low temperature for more deterministic output
+                    )
                 
                 # Debug raw tokens
                 print(f"DEBUG: generated_ids: {generated_ids[0].tolist()}", flush=True)

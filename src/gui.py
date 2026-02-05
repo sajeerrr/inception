@@ -14,6 +14,7 @@ from src.audio import AudioRecorder
 from src.stt import SpeechRecognizer
 from src.translator import OfflineTranslator
 from src.threat import ThreatDetector
+from src.corrector import GrammarCorrector
 
 class ProcessingPopup:
     def __init__(self, parent, filename):
@@ -147,6 +148,9 @@ class TranslaterApp:
             self.status_var.set("Loading Translator...")
             self.translator = OfflineTranslator()
             
+            self.status_var.set("Loading Grammar Corrector...")
+            self.corrector = GrammarCorrector()
+            
             self.status_var.set("Ready.")
             self.root.after(0, lambda: self.btn_record.config(state=tk.NORMAL))
             self.root.after(0, lambda: self.btn_upload.config(state=tk.NORMAL))
@@ -211,7 +215,8 @@ class TranslaterApp:
              self.process_audio_data(full_audio)
 
     def upload_file(self):
-        filepath = filedialog.askopenfilename(filetypes=[("Audio Files", "*.wav *.mp3")])
+        # Added support for OGA, OGG, FLAC, M4A, AAC as per request
+        filepath = filedialog.askopenfilename(filetypes=[("Audio Files", "*.wav *.mp3 *.oga *.ogg *.flac *.m4a *.aac *.wma")])
         if filepath:
             filename = os.path.basename(filepath)
             self.status_var.set(f"Queueing {filename}...")
@@ -400,9 +405,13 @@ class TranslaterApp:
                 self.check_threats(text_ks)
                 
                 # 2. Translate to English (NLLB)
-                text_en = self.translator.translate(text_ks, "ks", "en")
-                self.update_text(self.txt_en, text_en + " ")
-                self.check_threats(text_en)
+                raw_en = self.translator.translate(text_ks, "ks", "en")
+                
+                # 3. Post-Edit for Grammar & Flow (T5)
+                final_en = self.corrector.correct(raw_en)
+                
+                self.update_text(self.txt_en, final_en + " ")
+                self.check_threats(final_en)
                 
                 # 3. Translate to Hindi (NLLB) - REMOVED
                 # text_hi = self.translator.translate(text_ks, "ks", "hi")

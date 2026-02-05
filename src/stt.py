@@ -54,10 +54,10 @@ class SpeechRecognizer:
                     # Force Urdu language + Add penalties to stop repetition
                     generated_ids = self.model.generate(
                         **inputs, 
-                        language="ur",
-                        repetition_penalty=1.2,      # Penalize repeating tokens
-                        no_repeat_ngram_size=3,      # Prevent 3-gram repetitions
-                        temperature=0.2              # Low temperature for more deterministic output
+                        # language="ur",           
+                        repetition_penalty=1.2,    # Increased penalty as requested
+                        no_repeat_ngram_size=3,    # Prevent 3-gram repetitions (User: "i dont need repeted words")
+                        temperature=0.0            
                     )
                 
                 # Debug raw tokens

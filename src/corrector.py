@@ -3,8 +3,9 @@ import torch
 
 class GrammarCorrector:
     def __init__(self):
-        # vennify/t5-base-grammar-correction is a robust choice for grammar fixing
-        self.model_name = "vennify/t5-base-grammar-correction"
+        # google/flan-t5-base is excellent at following instructions like "Fix grammar" 
+        # and is lightweight (250M params) so it won't crash.
+        self.model_name = "google/flan-t5-base"
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.load_model()
         
@@ -12,7 +13,7 @@ class GrammarCorrector:
         print(f"Loading Grammar Corrector {self.model_name} on {self.device}...")
         try:
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-            self.model = AutoModelForSeq2SeqLM.from_pretrained(self.model_name)
+            self.model = AutoModelForSeq2SeqLM.from_pretrained(self.model_name, low_cpu_mem_usage=True)
             self.model.to(self.device)
             print("Grammar Corrector loaded.")
         except Exception as e:
@@ -30,8 +31,8 @@ class GrammarCorrector:
             return text
             
         try:
-            # T5 expects a prefix for the task
-            input_text = f"grammar: {text}"
+            # Instruction for Flan-T5
+            input_text = f"Fix grammar and improve flow: {text}"
             
             inputs = self.tokenizer(input_text, return_tensors="pt")
             if self.device == "cuda":
@@ -42,7 +43,8 @@ class GrammarCorrector:
                     **inputs, 
                     max_length=256,
                     num_beams=5,             # Beam search for better quality
-                    early_stopping=True
+                    early_stopping=True,
+                    repetition_penalty=1.2
                 )
             
             corrected_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)

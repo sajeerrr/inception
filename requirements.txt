@@ -1,0 +1,12 @@
+transformers
+torch
+torchaudio
+sentencepiece
+sacremoses
+sounddevice
+numpy
+noisereduce
+scipy
+Pillow
+tf-keras
+soundfile

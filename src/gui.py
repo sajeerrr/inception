@@ -80,7 +80,7 @@ class TranslaterApp:
         # Header
         header_frame = tk.Frame(self.root, bg="#2c3e50", height=80)
         header_frame.pack(fill=tk.X)
-        header_lbl = tk.Label(header_frame, text="AI4BHARAT", font=("Arial", 24, "bold"), bg="#2c3e50", fg="white")
+        header_lbl = tk.Label(header_frame, text="KTOE", font=("Arial", 24, "bold"), bg="#2c3e50", fg="white")
         header_lbl.pack(pady=20)
         
         # Status Bar
